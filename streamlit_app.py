@@ -1,51 +1,63 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objs as go
+import yfinance as yf
+import datetime
 
-# 페이지 설정
-st.set_page_config(page_title="Crypto-Bond Dashboard", layout="wide")
+st.set_page_config(page_title="크립토 & 미국 국채 투자판단", layout="wide")
 
-# 탭 UI 구성
-tab1, tab2, tab3 = st.tabs(["📈 실시간 지표", "🧠 투자 판단", "ℹ️ 설명 및 가이드"])
+st.title("📈 암호화폐(XRP) & 미국 국채(10Y) 투자판단 대시보드")
 
-# 탭 1: 실시간 지표
-with tab1:
-    st.header("📊 실시간 글로벌 경제 지표 대시보드")
+# 날짜 설정
+end_date = datetime.datetime.today()
+start_date = end_date - datetime.timedelta(days=365 * 2)
 
-    st.info("※ 현재는 예시 데이터입니다. 추후 실시간 API 연동 예정입니다.")
-    
-    col1, col2, col3 = st.columns(3)
+# 데이터 불러오기
+@st.cache_data
+def load_data():
+    xrp = yf.download("XRP-USD", start=start_date, end=end_date)
+    bond = yf.download("^TNX", start=start_date, end=end_date)  # 미국 10년물 금리
+    return xrp, bond
 
-    with col1:
-        st.metric(label="VIX (변동성지수)", value="17.3", delta="-1.2")
-        st.metric(label="금 가격", value="$2,325", delta="+0.4%")
-        st.metric(label="WTI 유가", value="$82.1", delta="+0.9%")
+xrp, bond = load_data()
 
-    with col2:
-        st.metric(label="나스닥", value="13,980", delta="-0.8%")
-        st.metric(label="달러 인덱스 (DXY)", value="101.5", delta="-0.3%")
-        st.metric(label="미 10년 국채금리", value="4.21%", delta="+0.05%")
+# 날짜 컬럼 정리
+xrp.reset_index(inplace=True)
+bond.reset_index(inplace=True)
 
-    with col3:
-        st.metric(label="BTC 가격", value="$64,300", delta="+1.8%")
-        st.metric(label="XRP 가격", value="$0.58", delta="+0.6%")
-        st.metric(label="USD/KRW 환율", value="1,345.20₩", delta="-3.2₩")
+# 그래프
+fig = go.Figure()
 
-    st.markdown("---")
-    
-    st.subheader("📉 주요 지표 차트 (예시)")
-    sample_data = pd.DataFrame({
-        "날짜": pd.date_range(start="2024-04-01", periods=7),
-        "VIX": [18.2, 17.8, 17.1, 16.9, 17.5, 17.3, 17.0],
-        "금리": [4.10, 4.15, 4.18, 4.17, 4.20, 4.23, 4.21],
-    })
+fig.add_trace(go.Scatter(x=xrp['Date'], y=xrp['Close'], name='XRP', yaxis='y1', line=dict(color='deepskyblue')))
+fig.add_trace(go.Scatter(x=bond['Date'], y=bond['Close'], name='미국10Y금리', yaxis='y2', line=dict(color='orange')))
 
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=sample_data["날짜"], y=sample_data["VIX"], name="VIX", line=dict(color='orange')))
-    fig.add_trace(go.Scatter(x=sample_data["날짜"], y=sample_data["금리"], name="미10년 금리", yaxis="y2", line=dict(color='blue')))
+fig.update_layout(
+    title="XRP & 미국 10년물 금리",
+    xaxis=dict(title="날짜"),
+    yaxis=dict(title="XRP"),
+    yaxis2=dict(
+        title="미10년 금리",
+        overlaying="y",
+        side="right"
+    ),
+    legend=dict(x=0, y=1.1, orientation="h"),
+    height=500
+)
 
-    # y축 2개 설정
-    fig.update_layout(
-        xaxis=dict(title="날짜"),
-        yaxis=dict(title="VIX"),
-        yaxis2=dict(title="미10년 금리", overlaying
+st.plotly_chart(fig, use_container_width=True)
+
+# 투자 판단 로직 (간단 예시)
+latest_xrp = xrp['Close'].iloc[-1]
+latest_bond = bond['Close'].iloc[-1]
+
+st.subheader("🔎 현재 지표로 본 투자 판단")
+
+if latest_xrp < 0.5 and latest_bond > 4:
+    st.success("✅ XRP 저평가 + 금리 고점 예상 → XRP 매수 기회 가능성")
+elif latest_xrp > 1.0 and latest_bond < 3:
+    st.warning("⚠️ XRP 고평가 + 금리 저점 → 매도 고려")
+else:
+    st.info("📊 중립: 명확한 추세 아님")
+
+st.caption("데이터 출처: Yahoo Finance | 본 대시보드는 투자 참고용이며, 책임은 사용자에게 있습니다.")
+
