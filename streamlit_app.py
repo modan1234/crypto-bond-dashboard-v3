@@ -40,13 +40,13 @@ st.subheader("🔎 현재 지표로 본 투자 판단")
 
 # 최신값 추출
 try:
-    xrp_value = xrp_df["Close"].iloc[-1]
-    bond_value = bond_df["Close"].iloc[-1]
+    xrp_value = xrp_df["Close"].iloc[-1]  # 스칼라 값
+    bond_value = bond_df["Close"].iloc[-1]  # 스칼라 값
 
     # 투자 판단 로직
-    if xrp_value < 0.5 and bond_value > 4:
+    if float(xrp_value) < 0.5 and float(bond_value) > 4:
         recommendation = "✅ XRP 매수, 미국채 매도 (암호화폐 상승 초기 가능성)"
-    elif xrp_value > 1 and bond_value < 3:
+    elif float(xrp_value) > 1 and float(bond_value) < 3:
         recommendation = "✅ XRP 매도, 미국채 매수 (암호화폐 과열 및 안전자산 이동)"
     else:
         recommendation = "🟡 중립 (더 많은 데이터 필요)"
